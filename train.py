@@ -1,13 +1,15 @@
 from helper import *
 #Creating an object of ArgumentParser
+
 parser = argparse.ArgumentParser()
-parser.add_argument('data_dir')
-parser.add_argument('--save_dir')
-parser.add_argument('--arch')
-parser.add_argument('--learning_rate')
-parser.add_argument('--hidden_units')
-parser.add_argument('--epochs')
-parser.add_argument('--gpu')
+parser.add_argument('data_dir', type=str, help='Directory to training images')
+parser.add_argument('--save_dir', type=str, default='checkpoints', help='Directory to save checkpoints')
+parser.add_argument('--arch', dest='arch', default='densenet161', action='store',choices=['vgg13', 'densenet121'], help='Architecture')
+parser.add_argument('--learning_rate', type=float, default=0.01, help='Learning rate')
+parser.add_argument('--hidden_units', type=int, default=512, help='hidden units')
+parser.add_argument('--epochs', type=int, default=20, help='Epoch count')
+parser.add_argument('--gpu', dest='gpu', action='store_true', help='Use GPU for training')
+parser.set_defaults(gpu=False)
 
 args = parser.parse_args()
 data_dir = args.data_dir
@@ -19,7 +21,9 @@ epochs = args.epochs
 device = args.gpu
 
 
- 
+#Defining the number of units in output layer
+output_units = 102
+    
 if(data_dir == None):
     print("Data directory cannot be none")
     exit()
@@ -27,8 +31,14 @@ if(data_dir == None):
 if(arch == None):
     arch = "densenet121"
 
-if(arch!='vgg16' and arch!='densenet121'):
-    print("Select either vgg13 or densenet121")
+if(arch == "densenet121"):
+    input_units = 1024
+ 
+if(arch == "vgg13"):
+    input_units = 25088
+
+if(arch!='vgg13' and arch!='densenet121'):
+    print("Select either vgg13 or densenet121 model")
     exit()
 
 if(save_dir == None):
@@ -45,17 +55,22 @@ else:
     epochs = int(epochs)
                     
 if(hidden_units == None):
-    hidden_units = 256
+    if(arch =="densenet121"):
+        hidden_units = 500   
+    elif(arch == "vgg13"):
+        hidden_units = 4096
+        
 else:
     hidden_units = int(hidden_units)
 
-if(device == None):
+if(device == False):
     device = "cpu"
-
-if(device!="cpu" and device!="cuda"):
-    print("Select either cpu or cuda")
-    exit()
-
+else:
+    if(torch.cuda.is_available()):
+        device = "cuda"
+    else:
+        Print("Torch Cuda is not available!! Hence Using CPU")
+        device = "cpu"
             
 #print(data_dir)
 #print(save_dir)
@@ -67,18 +82,18 @@ if(device!="cpu" and device!="cuda"):
 
 
 #Build and train the network
-if(arch=='vgg16'):
-    model = models.vgg16(pretrained = True)
+if(arch=='vgg13'):
+    model = models.vgg13(pretrained = True)
 else:
     model = models.densenet121(pretrained = True)
                     
 for param in model.parameters():
     param.require_grad = False
 
-classifier = nn.Sequential(nn.Linear(1024,hidden_units),
+classifier = nn.Sequential(nn.Linear(input_units,hidden_units),
                           nn.ReLU(),
                           nn.Dropout(0.2),
-                          nn.Linear(hidden_units,102),
+                          nn.Linear(hidden_units,output_units),
                           nn.LogSoftmax(dim = 1))
 
 model.classifier = classifier
@@ -167,9 +182,3 @@ checkpoint = {'transfer_model': arch,
 
 torch.save(checkpoint, save_dir)
 print("Model Saved To : "+save_dir)
-
-
-
-
-                    
-                    
