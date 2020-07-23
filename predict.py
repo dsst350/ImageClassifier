@@ -4,7 +4,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('image_path',help = 'Path of the image to be predicted')
 parser.add_argument('checkpoint',help = 'Path of the Checkpoint file')
 parser.add_argument('--top_k',help = 'Number specifying how many top predictions to find')
-parser.add_argument('--gpu',help = 'Use GPU for training )
+parser.add_argument('--gpu',help = 'Use GPU for training')
 parser.add_argument('--category_names',help= 'Path of the json file for mapping')
 parser.set_defaults(gpu=False)
 
