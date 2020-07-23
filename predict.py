@@ -1,11 +1,12 @@
 from helper import *
 #Creating an object of ArgumentParser
 parser = argparse.ArgumentParser()
-parser.add_argument('image_path')
-parser.add_argument('checkpoint')
-parser.add_argument('--top_k')
-parser.add_argument('--gpu')
-parser.add_argument('--category_names')
+parser.add_argument('image_path',help = 'Path of the image to be predicted')
+parser.add_argument('checkpoint',help = 'Path of the Checkpoint file')
+parser.add_argument('--top_k',help = 'Number specifying how many top predictions to find')
+parser.add_argument('--gpu',help = 'Use GPU for training )
+parser.add_argument('--category_names',help= 'Path of the json file for mapping')
+parser.set_defaults(gpu=False)
 
 #Parsing the Arguments
 args = parser.parse_args()
@@ -21,11 +22,14 @@ if(top_k is None):
 else:
     top_k = int(top_k)
 
-if(device is None):
+if(device == False):
     device = "cpu"
-if(device!="cpu" and device!="cuda"):
-    print("Select either cpu or cuda")
-    exit()
+else:
+    if(torch.cuda.is_available()):
+        device = "cuda"
+    else:
+        Print("Torch Cuda is not available!! Hence Using CPU")
+        device = "cpu"
 
 if(category_names is None):
     category_names = 'cat_to_name.json'
@@ -43,25 +47,32 @@ if((image_path == None) or (check_point == None)):
     print("Image Path and Check Point cannot be None")
     exit()
     
-print(top_k)
-print(device)
-print(check_point)
-print(image_path)
-print(category_names)
+#print(top_k)
+#print(device)
+#print(check_point)
+#print(image_path)
+#print(category_names)
+                    
+#Defining the no of units in the output layer
+output_units = 102
 
 #A function that loads a checkpoint and rebuilds the model
 def load_model(path):
     model_state = torch.load(path)
     arch = model_state['transfer_model']
     hidden_units = 256
-    if(arch == "vgg16"):
-        model = models.vgg16(pretrained = True)
+    if(arch == "vgg13"):
+        model = models.vgg13(pretrained = True)
+        input_units = 25088
+        hidden_units = 4096
     else:
         model = models.densenet121(pretrained = True)
-    model.classifier = nn.Sequential(nn.Linear(1024,hidden_units),
+        input_units = 1024
+        hidden_units = 500
+    model.classifier = nn.Sequential(nn.Linear(input_units,hidden_units),
                                     nn.ReLU(),
                                     nn.Dropout(p=0.2),
-                                    nn.Linear(hidden_units,102),
+                                    nn.Linear(hidden_units,output_units),
                                     nn.LogSoftmax(dim = 1))
     model.load_state_dict(model_state['state_dict'])
     return model
@@ -159,15 +170,3 @@ scores, classes = predict(image_path, model)
 flowers = [cat_to_name[str(i)] for i in classes]
 print(scores)
 print(flowers)
-
-
-
-
-
-
-            
-    
-    
-
-    
-
